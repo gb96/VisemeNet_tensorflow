@@ -1,13 +1,25 @@
 import numpy as np
 import tensorflow as tf
-import glob
 
-from src.utl.load_param import *
 from src.model import model
-from src.utl.load_param import *
-from src.utl.utl import *
-import math
-import time
+from src.utl.load_param import (
+    batch_per_chunk_size,
+    csv_dir,
+    lpw_dir,
+    model_dir,
+    n_face_id,
+    n_input,
+    n_landmark,
+    n_phoneme,
+    n_steps,
+    pred_dir,
+)
+from src.utl.utl import (
+    try_mkdir,
+    simple_read_clip_len,
+    read_chunk_data,
+    read_next_batch_easy_from_raw
+)
 
 
 def test(model_name, test_audio_name):

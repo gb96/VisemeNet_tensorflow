@@ -10,9 +10,14 @@ from src.utl.load_param import (
     n_landmark,
     n_phoneme,
     n_steps,
-    pred_dir
-    )
-from src.utl.utl import read_chunk_data, read_next_batch_easy_from_raw, simple_read_clip_len, try_mkdir
+    pred_dir,
+)
+from src.utl.utl import (
+    read_chunk_data,
+    read_next_batch_easy_from_raw,
+    simple_read_clip_len,
+    try_mkdir,
+)
 
 # TF compatability:
 Session = tf.compat.v1.Session
