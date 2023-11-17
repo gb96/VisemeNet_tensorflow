@@ -1,9 +1,9 @@
 import numpy as np
 import scipy as sp
+
 from scipy import signal
-import matplotlib.pyplot as plt
-import copy
-from src.utl.load_param import *
+
+from src.utl.load_param import pred_dir
 
 def eval_viseme(test_audio_name):
 

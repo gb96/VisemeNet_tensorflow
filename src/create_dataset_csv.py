@@ -1,4 +1,11 @@
-from src.utl.load_param import *
+from src.utl.load_param import (
+    csv_dir,
+    lpw_dir,
+    mfcc_win_step_per_frame,
+    up_sample_rate,
+    win_size,
+    NFFT,
+    )
 from src.utl.utl import try_mkdir
 import numpy as np
 import os, math
@@ -8,7 +15,7 @@ from python_speech_features import logfbank, mfcc, ssc
 
 
 
-def create_dataset_csv(csv_dir, test_audio_name='test_audio.wav'):
+def create_dataset_csv(csv_dir=csv_dir, test_audio_name='test_audio.wav'):
     loaded_data = dict()
     loaded_data['wav'] = []
     loaded_data['phoneme'] = []
@@ -50,12 +57,13 @@ def create_dataset_csv(csv_dir, test_audio_name='test_audio.wav'):
 
             # fps = (nLandmark + 1) / (sig.shape[0] / rate)
             fps = 25
-            errf.write(file_list["wav"][nClip] + 'FPS: {:} \n'.format(fps))
-            print('FPS: {:}'.format(fps))
+            # fps_info = file_list["wav"][nClip] + f'FPS: {fps} \n'
+            # errf.write(fps_info)
+            # print(fps_info)
             winstep = 1.0 / fps / mfcc_win_step_per_frame / up_sample_rate
-            mfcc_feat = mfcc(sig, samplerate=rate, winlen=0.025, winstep=winstep, numcep=13)
-            logfbank_feat = logfbank(sig, samplerate=rate, winlen=0.025, winstep=winstep, nfilt=26)
-            ssc_feat = ssc(sig, samplerate=rate, winlen=0.025, winstep=winstep, nfilt=26)
+            mfcc_feat = mfcc(sig, samplerate=rate, winlen=0.025, winstep=winstep, numcep=13, nfft=NFFT)
+            logfbank_feat = logfbank(sig, samplerate=rate, winlen=0.025, winstep=winstep, nfilt=26, nfft=NFFT)
+            ssc_feat = ssc(sig, samplerate=rate, winlen=0.025, winstep=winstep, nfilt=26, nfft=NFFT)
             full_feat = np.concatenate([mfcc_feat, logfbank_feat, ssc_feat], axis=1)
             # full_feat = logfbank_feat
 

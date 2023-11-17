@@ -1,24 +1,59 @@
 import tensorflow as tf
+import keras
 
-from src.utl.load_param import *
-import numpy as np
-import numpy.random
+from src.utl.load_param import (
+    kernel_type,
+    learning_rate,
+    n_cls_fc1,
+    n_face_id,
+    n_hidden,
+    n_hidden_net2_cls,
+    n_hidden_net2_jali,
+    n_hidden_net2_reg,
+    n_input,
+    n_jali_fc1,
+    n_landmark,
+    n_layers,
+    n_maya_param,
+    n_out_fc1,
+    n_phoneme,
+    n_reg_fc1,
+    n_steps,
+    p_alpha,
+    win_size_2
+)
 
 
 def model():
 
+    # TF compatibility:
+    assign = tf.compat.v1.assign
+    assign_add = tf.compat.v1.assign_add
+    dynamic_rnn = tf.nn.dynamic_rnn  # Please use `keras.layers.RNN(cell)`
+    # dynamic_rnn = keras.layers.RNN  # keyword "scope" not defined
+    get_collection = tf.compat.v1.get_collection
+    global_variables_initializer = tf.compat.v1.global_variables_initializer
+    merge_all = tf.compat.v1.summary.merge_all
+    placeholder = tf.compat.v1.placeholder
+    scalar = tf.compat.v1.summary.scalar
+    softmax_cross_entropy_with_logits_v2 = tf.nn.softmax_cross_entropy_with_logits_v2
+    trainable_variables = tf.compat.v1.trainable_variables
+    truncated_normal = tf.random.truncated_normal
+    AdamOptimizer = tf.compat.v1.train.AdamOptimizer
+    GraphKeys = tf.compat.v1.GraphKeys
+
     #  tf graph input
     with tf.name_scope('input'):
-        batch_size_placeholder = tf.placeholder("float32")
+        batch_size_placeholder = placeholder("float32")
         # net 1
-        x = tf.placeholder("float32", [None, n_steps, n_input])
-        x_face_id = tf.placeholder("float32", [None, n_face_id])
-        y_landmark = tf.placeholder("float32", [None, n_landmark])
-        y_phoneme = tf.placeholder("float32", [None, n_phoneme])
-        y_lipS = tf.placeholder("float32", [None, 1])
-        phase = tf.placeholder(tf.bool, name='phase')
+        x = placeholder("float32", [None, n_steps, n_input])
+        x_face_id = placeholder("float32", [None, n_face_id])
+        y_landmark = placeholder("float32", [None, n_landmark])
+        y_phoneme = placeholder("float32", [None, n_phoneme])
+        y_lipS = placeholder("float32", [None, 1])
+        phase = placeholder(tf.bool, name='phase')
         # net 2
-        y_maya_param = tf.placeholder("float32", [None, n_maya_param])
+        y_maya_param = placeholder("float32", [None, n_maya_param])
 
 
     # fully connected layer weights and bias
@@ -27,18 +62,18 @@ def model():
         n_out_phoneme_fc2 = n_phoneme
 
         w1_land = tf.Variable(tf.concat(
-            [tf.truncated_normal([n_hidden, n_out_fc1], stddev=2 / (n_hidden + n_out_fc1), dtype=tf.float32),
-             tf.truncated_normal([n_face_id, n_out_fc1], stddev=2 / (n_face_id + n_out_fc1), dtype=tf.float32)],
+            [truncated_normal([n_hidden, n_out_fc1], stddev=2 / (n_hidden + n_out_fc1), dtype=tf.float32),
+             truncated_normal([n_face_id, n_out_fc1], stddev=2 / (n_face_id + n_out_fc1), dtype=tf.float32)],
             axis=0), name='net1_w1_land')
         w1_pho = tf.Variable(
-            tf.truncated_normal([n_hidden + n_face_id, n_out_fc1], stddev=2 / (n_hidden + n_face_id + n_out_fc1),
+            truncated_normal([n_hidden + n_face_id, n_out_fc1], stddev=2 / (n_hidden + n_face_id + n_out_fc1),
                                 dtype=tf.float32), name='net1_w1_pho')
 
         w2_land = tf.Variable(
-            tf.truncated_normal([n_out_fc1, n_out_landmark_fc2], stddev=2 / (n_out_fc1 + n_out_landmark_fc2),
+            truncated_normal([n_out_fc1, n_out_landmark_fc2], stddev=2 / (n_out_fc1 + n_out_landmark_fc2),
                                 dtype=tf.float32), name='net1_w2_land')
         w2_pho = tf.Variable(
-            tf.truncated_normal([n_out_fc1, n_out_phoneme_fc2], stddev=2 / (n_out_fc1 + n_out_phoneme_fc2),
+            truncated_normal([n_out_fc1, n_out_phoneme_fc2], stddev=2 / (n_out_fc1 + n_out_phoneme_fc2),
                                 dtype=tf.float32), name='net1_w2_pho')
 
         b1_land = tf.Variable(tf.ones([n_out_fc1], dtype=tf.float32) * 0.1, name='net1_b1_land')
@@ -49,7 +84,7 @@ def model():
 
     # LSTM model
     with tf.name_scope('net1_shared_rnn'):
-        dropout = tf.placeholder("float32")
+        dropout = placeholder("float32")
 
         if (kernel_type == 'rnn'):
             cell_func = tf.contrib.rnn.BasicRNNCell
@@ -62,7 +97,7 @@ def model():
         def one_layer_lstm_kernel(x, dropout, n_hidden):
             lstm_cell = cell_func(n_hidden, initializer=tf.glorot_normal_initializer())
             cell = tf.contrib.rnn.DropoutWrapper(lstm_cell, output_keep_prob=1.0 - dropout)
-            return tf.nn.dynamic_rnn(cell, x, dtype=tf.float32)
+            return dynamic_rnn(cell, x, dtype=tf.float32)
 
         def n_layer_rnn_kernel(x, dropout, n_layers, n_hidden):
             cells = []
@@ -70,8 +105,9 @@ def model():
                 lstm_cell = cell_func(n_hidden)
                 lstm_cell = tf.contrib.rnn.DropoutWrapper(lstm_cell, output_keep_prob=1.0 - dropout)
                 cells.append(lstm_cell)
-            cell = tf.contrib.rnn.MultiRNNCell(cells)
-            return tf.nn.dynamic_rnn(cell, x, dtype=tf.float32, scope='net1_rnn')
+            cell = tf.contrib.rnn.MultiRNNCell(cells)  # tf.keras.layers.StackedRNNCells
+            # cell = tf.keras.layers.StackedRNNCells(cells)  # TypeError: call() takes 2 positional arguments but 3 were given
+            return dynamic_rnn(cell, x, dtype=tf.float32, scope='net1_rnn')
 
         net1_rnn_output, states = n_layer_rnn_kernel(x=x, dropout=dropout, n_layers=n_layers,
                                                 n_hidden=n_hidden)  # x in [n_batch x n_step x n_feature]
@@ -138,38 +174,38 @@ def model():
         cell_jali = tf.contrib.rnn.MultiRNNCell(cells_jali)
         cell_cls = tf.contrib.rnn.MultiRNNCell(cells_cls)
         cell_reg = tf.contrib.rnn.MultiRNNCell(cells_reg)
-        output_jali, _ = tf.nn.dynamic_rnn(cell_jali, net2_input, dtype=tf.float32, scope='net2_rnn_jali')
-        output_cls, _ = tf.nn.dynamic_rnn(cell_cls, net2_input, dtype=tf.float32, scope='net2_rnn_cls')
-        output_reg, _ = tf.nn.dynamic_rnn(cell_reg, net2_input, dtype=tf.float32, scope='net2_rnn_reg')
+        output_jali, _ = dynamic_rnn(cell_jali, net2_input, dtype=tf.float32, scope='net2_rnn_jali')
+        output_cls, _ = dynamic_rnn(cell_cls, net2_input, dtype=tf.float32, scope='net2_rnn_cls')
+        output_reg, _ = dynamic_rnn(cell_reg, net2_input, dtype=tf.float32, scope='net2_rnn_reg')
         output_jali = output_jali[:, -1, :]
         output_cls = output_cls[:, -1, :]
         output_reg = output_reg[:, -1, :]
 
     with tf.name_scope('net2_fc'):
-        w1_cls = tf.Variable(tf.truncated_normal([n_hidden_net2_cls, n_cls_fc1], stddev=2 / (n_hidden_net2_cls + n_cls_fc1)),
+        w1_cls = tf.Variable(truncated_normal([n_hidden_net2_cls, n_cls_fc1], stddev=2 / (n_hidden_net2_cls + n_cls_fc1)),
                              dtype=tf.float32, name='net2_w1_cls')
         b1_cls = tf.Variable(tf.constant(0.1, shape=[n_cls_fc1]), dtype=tf.float32, name='net2_b1_cls')
         w2_cls = tf.Variable(
-            tf.truncated_normal([n_cls_fc1, n_maya_param-2], stddev=2 / (n_cls_fc1 + n_maya_param-2)),
+            truncated_normal([n_cls_fc1, n_maya_param-2], stddev=2 / (n_cls_fc1 + n_maya_param-2)),
             dtype=tf.float32, name='net2_w2_cls')
         b2_cls = tf.Variable(tf.constant(0.1, shape=[n_maya_param-2]), dtype=tf.float32, name='net2_b2_cls')
 
-        w1_reg = tf.Variable(tf.truncated_normal([n_hidden_net2_reg, n_reg_fc1], stddev=2 / (n_hidden_net2_reg + n_reg_fc1)),
+        w1_reg = tf.Variable(truncated_normal([n_hidden_net2_reg, n_reg_fc1], stddev=2 / (n_hidden_net2_reg + n_reg_fc1)),
                              dtype=tf.float32, name='net2_w1_reg')
         b1_reg = tf.Variable(tf.constant(0.1, shape=[n_reg_fc1]), dtype=tf.float32, name='net2_b1_reg')
         w2_reg = tf.Variable(
-            tf.truncated_normal([n_reg_fc1, 100], stddev=2 / (n_reg_fc1 + 100)),
+            truncated_normal([n_reg_fc1, 100], stddev=2 / (n_reg_fc1 + 100)),
             dtype=tf.float32, name='net2_w2_reg')
         b2_reg = tf.Variable(tf.constant(0.1, shape=[100]), dtype=tf.float32, name='net2_b2_reg')
         w3_reg = tf.Variable(
-            tf.truncated_normal([100, n_maya_param-2], stddev=2 / (100 + n_maya_param-2)),
+            truncated_normal([100, n_maya_param-2], stddev=2 / (100 + n_maya_param-2)),
             dtype=tf.float32, name='net2_w3_reg')
         b3_reg = tf.Variable(tf.constant(0.1, shape=[n_maya_param-2]), dtype=tf.float32, name='net2_b3_reg')
 
-        w1_jali = tf.Variable(tf.truncated_normal([n_hidden_net2_jali, n_jali_fc1], stddev=2 / (n_hidden_net2_jali + n_jali_fc1)),
+        w1_jali = tf.Variable(truncated_normal([n_hidden_net2_jali, n_jali_fc1], stddev=2 / (n_hidden_net2_jali + n_jali_fc1)),
                               dtype=tf.float32, name='net2_w1_jali')
         b1_jali = tf.Variable(tf.constant(0.1, shape=[n_jali_fc1]), dtype=tf.float32, name='net2_b1_jali')
-        w2_jali = tf.Variable(tf.truncated_normal([n_jali_fc1, 2], stddev=2 / (n_jali_fc1 + 2)),
+        w2_jali = tf.Variable(truncated_normal([n_jali_fc1, 2], stddev=2 / (n_jali_fc1 + 2)),
                               dtype=tf.float32, name='net2_w2_jali')
         b2_jali = tf.Variable(tf.constant(0.1, shape=[2]), dtype=tf.float32, name='net2_b2_jali')
 
@@ -207,10 +243,10 @@ def model():
 
         cost['net1_motion'] = tf.reduce_mean(tf.abs(m_land_pred)) * 1000
         cost['net1_land'] = tf.reduce_mean(tf.abs(weighted_pred_diff)) * 1000
-        cost['net1_pho'] = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=pred['net1_pho'], labels=y_phoneme))
+        cost['net1_pho'] = tf.reduce_mean(softmax_cross_entropy_with_logits_v2(logits=pred['net1_pho'], labels=y_phoneme))
         cost['net1_pho_err'] = net1_pho_err
 
-        t_vars = tf.trainable_variables()
+        t_vars = trainable_variables()
         reg_losses_1 = [tf.reduce_sum(tf.nn.l2_loss(var)) for var in t_vars if ('net1_' in var.name)]
         cost['net1_regularization'] = sum(reg_losses_1) / len(reg_losses_1)
 
@@ -251,28 +287,28 @@ def model():
 
         pred['viseme'] = tf.cast((cls_sig > 0.5), dtype=tf.float32) * pred['v_reg']
 
-        t_vars = tf.trainable_variables()
+        t_vars = trainable_variables()
         reg_losses = [tf.reduce_sum(tf.abs(var)) for var in t_vars if ('net2_' in var.name and '_b' not in var.name)]
 
         cost['net2'] = 0.35 * cost['net2_v_cls'] * p_alpha + 0.2 * cost['net2_v_reg'] + 0.2 * cost['net2_jali'] \
                        + cost['net2_motion'] * 0.015 + cost['net2_1st_deriv'] * 0.1 + 0.01 * sum(reg_losses) / len(reg_losses)
 
     # optimizer
-    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    update_ops = get_collection(GraphKeys.UPDATE_OPS)
     with tf.control_dependencies(update_ops):
-        t_vars = tf.trainable_variables()
+        t_vars = trainable_variables()
         net1_vars = [var for var in t_vars if 'net1_' in var.name]
         net2_vars = [var for var in t_vars if 'net2_' in var.name]
 
         net2_reg_vars = [var for var in t_vars if ('net2_' in var.name and 'reg' in var.name)]
-        net1_pho_vars = [var for var in t_vars if ('net1_' in var.name and 'pho' in var.name)]
+        # net1_pho_vars = [var for var in t_vars if ('net1_' in var.name and 'pho' in var.name)]
 
-        net1_optim = tf.train.AdamOptimizer(learning_rate).minimize(cost['net1'], var_list=net1_vars)
-        net2_optim = tf.train.AdamOptimizer(learning_rate).minimize(cost['net2'], var_list=net2_vars)
-        all_optim = tf.train.AdamOptimizer(learning_rate=0.0005).minimize(cost['net2_v_reg'], var_list=net2_reg_vars)
+        net1_optim = AdamOptimizer(learning_rate).minimize(cost['net1'], var_list=net1_vars)
+        net2_optim = AdamOptimizer(learning_rate).minimize(cost['net2'], var_list=net2_vars)
+        all_optim = AdamOptimizer(learning_rate=0.0005).minimize(cost['net2_v_reg'], var_list=net2_reg_vars)
 
     # Initializing the variables
-    init = tf.global_variables_initializer()
+    init = global_variables_initializer()
 
     # cv error for avg
     with tf.name_scope('err_avg'):
@@ -281,25 +317,21 @@ def model():
         inc_op = dict()
         avg = dict()
         sum_val['batch'] = tf.Variable(0.)
-        clear_op['batch'] = tf.assign(sum_val['batch'], 0.)
-        inc_op['batch'] = tf.assign_add(sum_val['batch'], batch_size_placeholder)
+        clear_op['batch'] = assign(sum_val['batch'], 0.)
+        inc_op['batch'] = assign_add(sum_val['batch'], batch_size_placeholder)
         for key in ['net1_land', 'net1_pho', 'net1', 'net1_pho_err', 'net1_regularization', 'net2_v_cls', 'net2_v_reg', 'net2_jali', 'net2', 'net1_motion', 'net2_motion', 'net2_1st_deriv']:
             sum_val[key] = tf.Variable(0.)
-            clear_op[key] = tf.assign(sum_val[key], 0.)
-            inc_op[key] = tf.assign_add(sum_val[key], cost[key] * batch_size_placeholder)
+            clear_op[key] = assign(sum_val[key], 0.)
+            inc_op[key] = assign_add(sum_val[key], cost[key] * batch_size_placeholder)
             avg[key] = tf.divide(sum_val[key], sum_val['batch'])
 
     tensorboard_op = dict()
     for d_type in ['Train', 'Val']:
         with tf.name_scope(d_type + '_tensorboard'):
             for key in ['net1_land', 'net1_pho', 'net1', 'net1_pho_err', 'net1_regularization', 'net2_v_cls', 'net2_v_reg', 'net2_jali', 'net2', 'net1_motion', 'net2_motion', 'net2_1st_deriv']:
-                tf.summary.scalar(d_type + '_' + key, avg[key], collections=[d_type])
-            tensorboard_op[d_type] = tf.summary.merge_all(d_type)
-
-    # check_param_num(net1_vars)
+                scalar(d_type + '_' + key, avg[key], collections=[d_type])
+            tensorboard_op[d_type] = merge_all(d_type)
 
     return init, net1_optim, net2_optim, all_optim, x, x_face_id, y_landmark, y_phoneme, y_lipS, y_maya_param, dropout, cost, \
            tensorboard_op, pred, clear_op, inc_op, avg, batch_size_placeholder, phase
 
-    # return init, optimizer, optimizer_landmark, optimizer_phoneme, x, y_landmark, y_phoneme, dropout, cost, error, \
-    #       summary_op_train, summary_op_cv, confusion_matrix, pred
