@@ -3,3 +3,9 @@ __pycache__/
 /data/ckpt/
 /data/csv/
 /data/output_viseme/
+err.txt
+wav_raw.csv
+wav_mean_std.csv
+mayaparam_pred_cls.txt
+mayaparam_pred_reg.txt
+mayaparam_viseme.txt

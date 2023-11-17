@@ -1,0 +1,5 @@
+# https://files.pythonhosted.org/packages/9a/51/99abd43185d94adaaaddf8f44a80c418a91977924a7bc39b8dacd0c495b0/tensorflow-1.15.5-cp37-cp37m-manylinux2010_x86_64.whl
+tensorflow < 2
+numpy
+scipy
+python_speech_features
