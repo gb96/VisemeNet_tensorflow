@@ -96,6 +96,7 @@ def eval_viseme(test_audio_name):
                 nb[active_begin:active_end, i] = nb[active_begin:active_end, i] * rate
             r += 1
 
-    np.savetxt(src + '_viseme.txt',nb, '%.4f')
-
-    print('Create Viseme parameter in ' + pred_dir + test_audio_name[:-4] + '/mayaparam_viseme.txt')
+    viseme_file_path = src + '_viseme.txt'
+    np.savetxt(viseme_file_path, nb, '%.4f')
+ 
+    print(f'Create Viseme parameter in {viseme_file_path}')
