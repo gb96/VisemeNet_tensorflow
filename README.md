@@ -35,9 +35,13 @@ cd VisemeNet_tensorflow
 2. **Create and install required envs and packages**
 
 ```
-# The included environment.yaml installs latest TF V1 for linux with CUDA 10 and Python 3.7.
-# You might also be able to get this working natively with conda under Windows.
-conda create -n visnet python=3.7 -f environment.yaml
+# The included environment.yaml installs latest TF V1 for linux with CUDA 10 and Python 3.7.16
+
+conda create -f environment.yaml
+
+# For Anaconda running on Windows, use the same command above but instead specify the environment_win.yml file:
+
+conda create -f environment_win.yml
 
 
 # activate conda environment
