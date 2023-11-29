@@ -21,7 +21,7 @@ n_layers = 3
 n_steps = 8
 n_input = int(mfcc_dim * mfcc_win_step_per_frame * win_size / n_steps)
 n_hidden = 256
-NFFT = 1024  # 512
+NFFT = 2048  #  1024  # 512
 
 n_phoneme = 21
 n_out_fc1 = 256
