@@ -56,15 +56,52 @@ conda activate visnet
 4. **Forward inference:**  
 
    * Run command line
+
 ```
 python main_test.py
-```  
-   The result locates at:  
+```
+
+   The output is saved to a file of space-delimeted data values located at:
+
 ```
 data/output_viseme/[your_audio_file_name]/mayaparam_viseme.txt
 ```
 
-5. **JALI animation in Maya:**
+Each row of the output file represents an animation frame at a rate of 25 frames per second.
+
+The data in the table are all fixed-point activation values represented to 4 decimal points
+with possible values between 0.0000 and 1.0000
+
+The meaning of each column is as follows:
+
+| Column | Viseme active |                             FACS AUs |
+| :----- | :-----------: | -----------------------------------: |
+| 1      |      JAw      |                                   26 |
+| 2      |      LIp      |                                    8 |
+| 3      |     'AAH'     |                          16D 17A 27D |
+| 4      |     'AAA'     | 10C 12C 14C 16D 17A     20B 22uB 27C |
+| 5      |     'Eh'      |
+| 6      |     'Ee'      |
+| 7      |     'Ih'      |
+| 8      |     'Oh'      |
+| 9      |     'Uh'      |
+| 10     |     'UUU'     |             17A 18D          27A 28A |
+| 11     |     'Eu'      |
+| 12     |    'Schwa'    |                                  27B |
+| 13     |     'RRR'     |                 17A 18C     22C  27A |
+| 14     |     'SSS'     |                  16E 17A         22C |
+| 15     |     'SSH'     | 10B         16B     18C 20A 22C  27A |
+| 16     |     'TTH'     | 10C             17A         22uD 27B |
+| 17     |     'JY'      |
+| 18     |    'LNTD'     |
+| 19     |     'GK'      |
+| 20     |     'MMM'     |                 17E         23uC 27A |
+| 21     |     'FFF'     |             17D         23uA 27A 28B |
+| 22     |  'WA_PEDAL'   |
+
+
+
+## JALI animation in Maya
 
    * put your test audio file name in file 'maya_animation.py', line 4.
    * Then run 'maya_animation.py' in Maya with JALI environment to create talking face animation automatically. (If using different version of JALI face rig, the name of phoneme/co-articulation variable might varies.)
